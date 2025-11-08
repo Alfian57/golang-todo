@@ -30,6 +30,21 @@ definitions:
     required:
     - refresh_token
     type: object
+  auth.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        minLength: 1
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.RefreshTokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
   auth.RegisterRequest:
     properties:
       password:
@@ -144,6 +159,43 @@ paths:
       security:
       - BearerAuth: []
       summary: User logout
+      tags:
+      - Auth
+  /auth/refresh-token:
+    post:
+      consumes:
+      - application/json
+      description: User refresh access token with refresh token
+      parameters:
+      - description: Refresh Token Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.RefreshTokenResponse'
+              type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: User refresh token
       tags:
       - Auth
   /auth/register:

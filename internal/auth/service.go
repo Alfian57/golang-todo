@@ -143,3 +143,102 @@ func (service AuthService) Logout(ctx context.Context, token string) models.Resp
 
 	return utils.CreatedResponse("Success to logout", nil)
 }
+
+func (service AuthService) GetUserByID(ctx context.Context, userID uuid.UUID) models.Response {
+	user, err := service.authRepository.FindUserByID(ctx, userID)
+	if err != nil {
+		service.log.Debug("User not found by ID",
+			logger.F("user_id", userID.String()),
+			logger.F("error", err),
+		)
+		return utils.NotFoundResponse("User not found", err, service.isDebug)
+	}
+
+	responseData := UserResponse{
+		ID:        user.ID.String(),
+		Username:  user.Username,
+		CreatedAt: user.CreatedAt.Format(time.RFC3339),
+	}
+	return utils.OkResponse("Success to get user", responseData)
+}
+
+func (service AuthService) RefreshToken(ctx context.Context, token string) models.Response {
+	// Find refresh token in database
+	existingRefreshToken, err := service.authRepository.FindRefreshTokenByToken(ctx, token)
+	if err != nil {
+		service.log.Debug("Refresh token not found during refresh token",
+			logger.F("refresh_token", token),
+			logger.F("error", err),
+		)
+		return utils.NotFoundResponse("Refresh token not exist or already used", nil, service.isDebug)
+	}
+
+	// Check if token is expired
+	if time.Now().After(existingRefreshToken.ExpiredAt) {
+		service.log.Debug("Refresh token expired",
+			logger.F("refresh_token", token),
+			logger.F("expired_at", existingRefreshToken.ExpiredAt),
+		)
+		// Delete expired token
+		_, _ = service.authRepository.DeleteRefreshTokenByToken(ctx, token)
+		return utils.UnauthorizedResponse("Refresh token expired", nil, service.isDebug)
+	}
+
+	userID := existingRefreshToken.UserID
+
+	// Delete old refresh token
+	rowsAffected, err := service.authRepository.DeleteRefreshTokenByToken(ctx, token)
+	if err != nil {
+		service.log.Error("Failed to delete refresh token during refresh token",
+			logger.F("operation", "Refresh Token - delete refresh token"),
+			logger.F("refresh_token", token),
+			logger.F("error", err),
+		)
+		return utils.InternalServerErrorResponse("Failed to refresh token", err, service.isDebug)
+	}
+	if rowsAffected == 0 {
+		service.log.Debug("Refresh token already deleted",
+			logger.F("refresh_token", token),
+		)
+		return utils.NotFoundResponse("Refresh token not exist", nil, service.isDebug)
+	}
+
+	// Create new access token
+	accessToken, err := service.jwtUtils.CreateJWT(userID.String())
+	if err != nil {
+		service.log.Error("Failed to create access token",
+			logger.F("operation", "Create access token"),
+			logger.F("user_id", userID.String()),
+			logger.F("error", err),
+		)
+		return utils.InternalServerErrorResponse("Failed to create access token", err, service.isDebug)
+	}
+
+	// Create new refresh token
+	refreshToken, err := utils.CreateRefreshToken()
+	if err != nil {
+		service.log.Error("Failed to create refresh token",
+			logger.F("operation", "Create refresh token"),
+			logger.F("user_id", userID.String()),
+			logger.F("error", err),
+		)
+		return utils.InternalServerErrorResponse("Failed to create refresh token", err, service.isDebug)
+	}
+
+	// Save new refresh token
+	_, err = service.authRepository.CreateRefreshToken(ctx, refreshToken, userID, service.jwtUtils.GetJWTTTL())
+	if err != nil {
+		service.log.Error("Failed to save refresh token",
+			logger.F("operation", "Save refresh token"),
+			logger.F("user_id", userID.String()),
+			logger.F("error", err),
+		)
+		return utils.InternalServerErrorResponse("Failed to save refresh token", err, service.isDebug)
+	}
+
+	responseData := RefreshTokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+	return utils.CreatedResponse("Success to refresh token", responseData)
+}

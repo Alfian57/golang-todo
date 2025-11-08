@@ -23,6 +23,11 @@ func (repository AuthRepository) FindUserByUsername(ctx context.Context, usernam
 	return user, err
 }
 
+func (repository AuthRepository) FindUserByID(ctx context.Context, userID uuid.UUID) (User, error) {
+	user, err := gorm.G[User](repository.db).Where("id = ?", userID).First(ctx)
+	return user, err
+}
+
 func (repository AuthRepository) CreateUser(ctx context.Context, username string, password string) (User, error) {
 	user := User{
 		Username: username,
@@ -45,6 +50,11 @@ func (repository AuthRepository) CreateRefreshToken(ctx context.Context, token s
 	result := gorm.WithResult()
 	err := gorm.G[RefreshToken](repository.db, result).Create(ctx, &refreshToken)
 
+	return refreshToken, err
+}
+
+func (repository AuthRepository) FindRefreshTokenByToken(ctx context.Context, token string) (RefreshToken, error) {
+	refreshToken, err := gorm.G[RefreshToken](repository.db).Where("token = ?", token).First(ctx)
 	return refreshToken, err
 }
 

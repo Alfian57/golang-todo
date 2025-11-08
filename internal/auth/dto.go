@@ -32,3 +32,12 @@ type RegisterResponse struct {
 type LogoutRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required,min=1"`
 }
+
+// Refresh Token
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required,min=1"`
+}
+type RefreshTokenResponse struct {
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
+}

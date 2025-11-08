@@ -22,5 +22,7 @@ func RegisterRoutes(router *gin.RouterGroup, db *gorm.DB, cfg *config.Config, lo
 		authGroup.POST("/login", authHandler.Login)
 		authGroup.POST("/register", authHandler.Register)
 		authGroup.POST("/logout", middleware.AuthMiddleware(jwtUtils, isDebug), authHandler.Logout)
+		authGroup.POST("/refresh-token", authHandler.RefreshToken)
+		authGroup.GET("/me", middleware.AuthMiddleware(jwtUtils, isDebug), authHandler.Me)
 	}
 }
