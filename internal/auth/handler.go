@@ -36,7 +36,7 @@ func (handler AuthHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	response := handler.authService.Login(ctx, req.Username, req.Password)
+	response := handler.authService.Login(ctx, req)
 	if response.StatusCode != 200 {
 		handler.log.Warn("Login request failed",
 			logger.F("operation", "Login"),
@@ -65,7 +65,7 @@ func (handler AuthHandler) Register(ctx *gin.Context) {
 		return
 	}
 
-	response := handler.authService.Register(ctx, req.Username, req.Password)
+	response := handler.authService.Register(ctx, req)
 	if response.StatusCode != 201 {
 		handler.log.Warn("Register request failed",
 			logger.F("operation", "Register"),

@@ -26,19 +26,18 @@ func NewAuthService(authRepository AuthRepository, jwtUtils *utils.JWTUtils, log
 	}
 }
 
-func (service AuthService) Login(ctx context.Context, username string, password string) models.Response {
-	user, err := service.authRepository.FindUserByUsername(ctx, username)
+func (service AuthService) Login(ctx context.Context, req LoginRequest) models.Response {
+	user, err := service.authRepository.FindUserByUsername(ctx, req.Username)
 	if err != nil {
 		service.log.Debug("User not found during login",
-			logger.F("username", username),
+			logger.F("username", req.Username),
 			logger.F("error", err),
 		)
 		return utils.UnauthorizedResponse("Username or password wrong", err, service.isDebug)
 	}
-
-	if !utils.CheckPasswordHash(password, user.Password) {
+	if !utils.CheckPasswordHash(req.Password, user.Password) {
 		service.log.Debug("Invalid password attempt",
-			logger.F("username", username),
+			logger.F("username", req.Username),
 		)
 		return utils.UnauthorizedResponse("Username or password wrong", nil, service.isDebug)
 	}
@@ -85,34 +84,34 @@ func (service AuthService) Login(ctx context.Context, username string, password 
 	return utils.OkResponse("Success to login", responseData)
 }
 
-func (service AuthService) Register(ctx context.Context, username string, password string) models.Response {
-	existingUser, err := service.authRepository.FindUserByUsername(ctx, username)
+func (service AuthService) Register(ctx context.Context, req RegisterRequest) models.Response {
+	existingUser, err := service.authRepository.FindUserByUsername(ctx, req.Username)
 	if err == nil && existingUser.ID != uuid.Nil {
 		service.log.Debug("Username already exists during registration",
-			logger.F("username", username),
+			logger.F("username", req.Username),
 		)
 		return utils.UnprocessableEntityResponse("Username already exists", nil, service.isDebug)
 	}
 
-	hashedPassword, err := utils.HashPassword(password)
+	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		service.log.Error("Failed to hash password",
 			logger.F("operation", "Hash password"),
-			logger.F("username", username),
+			logger.F("username", req.Username),
 			logger.F("error", err),
 		)
 		return utils.InternalServerErrorResponse("Failed to hash password", err, service.isDebug)
 	}
 
 	newUser := User{
-		Username: username,
+		Username: req.Username,
 		Password: hashedPassword,
 	}
 	err = service.authRepository.CreateUser(ctx, &newUser)
 	if err != nil {
 		service.log.Error("Failed to create user",
 			logger.F("operation", "Create user"),
-			logger.F("username", username),
+			logger.F("username", req.Username),
 			logger.F("error", err),
 		)
 		return utils.InternalServerErrorResponse("Failed to create user", err, service.isDebug)
