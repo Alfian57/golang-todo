@@ -28,16 +28,9 @@ func (repository AuthRepository) FindUserByID(ctx context.Context, userID uuid.U
 	return user, err
 }
 
-func (repository AuthRepository) CreateUser(ctx context.Context, username string, password string) (User, error) {
-	user := User{
-		Username: username,
-		Password: password,
-	}
-
+func (repository AuthRepository) CreateUser(ctx context.Context, user *User) error {
 	result := gorm.WithResult()
-	err := gorm.G[User](repository.db, result).Create(ctx, &user)
-
-	return user, err
+	return gorm.G[User](repository.db, result).Create(ctx, user)
 }
 
 func (repository AuthRepository) CreateRefreshToken(ctx context.Context, token string, userID uuid.UUID, expiredAt time.Time) (RefreshToken, error) {

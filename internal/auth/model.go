@@ -15,7 +15,7 @@ type User struct {
 
 type RefreshToken struct {
 	models.Base
-	Token     string
+	Token     string `gorm:"index"`
 	UserID    uuid.UUID
 	ExpiredAt time.Time
 }

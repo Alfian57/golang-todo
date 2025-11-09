@@ -104,7 +104,11 @@ func (service AuthService) Register(ctx context.Context, username string, passwo
 		return utils.InternalServerErrorResponse("Failed to hash password", err, service.isDebug)
 	}
 
-	newuser, err := service.authRepository.CreateUser(ctx, username, hashedPassword)
+	newUser := User{
+		Username: username,
+		Password: hashedPassword,
+	}
+	err = service.authRepository.CreateUser(ctx, &newUser)
 	if err != nil {
 		service.log.Error("Failed to create user",
 			logger.F("operation", "Create user"),
@@ -116,9 +120,9 @@ func (service AuthService) Register(ctx context.Context, username string, passwo
 
 	responseData := RegisterResponse{
 		User: UserResponse{
-			ID:        newuser.ID.String(),
-			Username:  newuser.Username,
-			CreatedAt: newuser.CreatedAt.Format(time.RFC3339),
+			ID:        newUser.ID.String(),
+			Username:  newUser.Username,
+			CreatedAt: newUser.CreatedAt.Format(time.RFC3339),
 		},
 	}
 	return utils.CreatedResponse("Success to register", responseData)
@@ -141,7 +145,7 @@ func (service AuthService) Logout(ctx context.Context, token string) models.Resp
 		return utils.NotFoundResponse("Refresh token not exist", nil, service.isDebug)
 	}
 
-	return utils.CreatedResponse("Success to logout", nil)
+	return utils.OkResponse("Success to logout", nil)
 }
 
 func (service AuthService) GetUserByID(ctx context.Context, userID uuid.UUID) models.Response {
@@ -240,5 +244,5 @@ func (service AuthService) RefreshToken(ctx context.Context, token string) model
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
-	return utils.CreatedResponse("Success to refresh token", responseData)
+	return utils.OkResponse("Success to refresh token", responseData)
 }
